@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copilot with Personas</title>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#fff; --ink:#1d2433; --muted:#5d6678; --line:#e2e6ef;
+  --word:#2b579a; --outlook:#0f6cbd; --excel:#217346; --teams:#5b5fc7;
+  --accent:#5b5fc7; --good:#1a7f4b; --warn:#a15c00; --warnbg:#fff6e5;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:linear-gradient(135deg,#2b3a67,#5b5fc7);color:#fff;padding:28px 20px 22px}
+header h1{margin:0 0 6px;font-size:1.7rem}
+header p{margin:0;max-width:760px;opacity:.92}
+.banner{background:var(--warnbg);color:var(--warn);border-bottom:1px solid #f0d9a8;padding:8px 20px;font-size:.88rem}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+nav button{border:0;background:transparent;padding:9px 14px;border-radius:999px;font:inherit;cursor:pointer;white-space:nowrap;color:var(--muted)}
+nav button.on{background:var(--accent);color:#fff}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+section{display:none}
+section.on{display:block}
+h2{margin:8px 0 6px;font-size:1.35rem}
+h3{margin:0 0 6px;font-size:1.05rem}
+.lead{color:var(--muted);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.step{border-top:4px solid var(--accent)}
+.step .n{font-weight:700;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:1px solid var(--line);background:#fff;padding:8px 13px;border-radius:999px;cursor:pointer;font:inherit;color:var(--ink)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip[data-app=Word].on{background:var(--word);border-color:var(--word)}
+.chip[data-app=Outlook].on{background:var(--outlook);border-color:var(--outlook)}
+.chip[data-app=Excel].on{background:var(--excel);border-color:var(--excel)}
+.chip[data-app^=Teams].on{background:var(--teams);border-color:var(--teams)}
+.scn{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:8px 0;cursor:pointer;font:inherit;color:var(--ink)}
+.scn.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,95,199,.18)}
+.scn small{display:block;color:var(--muted)}
+.prompt{background:#101828;color:#e8ecf5;border-radius:10px;padding:12px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86rem;white-space:pre-wrap;position:relative}
+.copy{position:absolute;top:8px;right:8px;background:#2a3550;color:#dbe3ff;border:0;border-radius:8px;padding:4px 9px;font-size:.75rem;cursor:pointer}
+.file{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.file:last-child{border-bottom:0}
+.ico{width:30px;height:30px;border-radius:7px;color:#fff;display:grid;place-items:center;font-weight:700;font-size:.8rem;flex:none}
+.out{background:#fbfbfe;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:12px 14px}
+.out.plain{border-left-color:#9aa3b5;background:#f7f7f9}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:#eceffd;color:var(--accent);margin-bottom:6px}
+.tag.grey{background:#eceef3;color:var(--muted)}
+.tag.green{background:#e3f5ec;color:var(--good)}
+ul{margin:6px 0 6px 18px;padding:0}
+li{margin:3px 0}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:11px 20px;font:inherit;cursor:pointer;font-weight:600}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+.think{color:var(--muted);font-style:italic;display:flex;gap:8px;align-items:center;padding:10px 0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:p 1s infinite}
+@keyframes p{50%{opacity:.25}}
+.fade{animation:f .45s ease}
+@keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.seg{cursor:pointer;border-radius:4px;padding:1px 2px}
+.seg.on{outline:2px solid #fff}
+.k-role{background:#5b5fc7}.k-ctx{background:#0f6cbd}.k-task{background:#217346}.k-crit{background:#a15c00}.k-fmt{background:#8a3ffc}.k-lim{background:#b42318}
+.legend span{font-size:.78rem;color:#fff;padding:2px 8px;border-radius:6px;margin-right:4px}
+.warn{background:var(--warnbg);border:1px solid #f0d9a8;border-radius:10px;padding:10px 14px}
+.persona-card{display:flex;gap:10px;align-items:flex-start}
+.emo{font-size:1.6rem}
+label{display:block;font-weight:600;margin:10px 0 4px;font-size:.9rem}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+textarea{min-height:64px}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.small{font-size:.86rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Copilot + Personas</h1>
+  <p>Use the same "draft, then let a persona review it" process you use with Claude, but inside Word, Outlook, Excel and Teams.</p>
+</header>
+<div class="banner">Everything here is illustrative. Names, figures and Copilot responses are invented and simulated in your browser. Nothing on this page calls a real Copilot.</div>
+<nav id="nav">
+  <button data-t="idea" class="on">1. The idea</button>
+  <button data-t="anatomy">2. Anatomy of a prompt</button>
+  <button data-t="examples">3. Worked examples</button>
+  <button data-t="build">4. Multiple personas at once</button>
+</nav>
+<main>
+
+<!-- ========== IDEA ========== -->
+<section id="idea" class="on">
+  <h2>The process in one loop</h2>
+  <p class="lead">A plain prompt gets you a competent, generic answer. A persona prompt gets you the answer of the person who will actually read, judge or act on your work.</p>
+  <div class="grid">
+    <div class="card step"><div class="n">Step 1</div><h3>Draft or gather</h3><p>Write the letter, build the table, open the thread. Copilot can help, but you own the first pass.</p></div>
+    <div class="card step"><div class="n">Step 2</div><h3>Review through a persona</h3><p>Ask Copilot to become the reader: the upset customer, the Head of Ops, the auditor. Ask what they'd challenge, quoting the text.</p></div>
+    <div class="card step"><div class="n">Step 3</div><h3>Revise, then verify</h3><p>Fix what the persona surfaced. Then check figures, wording and policy against your source files. You're accountable for it.</p></div>
+  </div>
+  <div class="card">
+    <h3>What's the point?</h3>
+    <ul>
+      <li><b>"Make it better" has no target.</b> Copilot guesses that better means smoother. A persona defines better as "Ms Patel understands what she's getting".</li>
+      <li><b>You get a rehearsal, not a rewrite.</b> The most valuable output is the list of objections, before the real person raises them.</li>
+      <li><b>Several lenses, one document.</b> Customer, regulator and QA each catch different things. You can run them in turn on the same file.</li>
+      <li><b>Copilot works on your files.</b> That grounding (case notes, packs, threads) is what makes a persona review specific rather than vague.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Persona library</h3>
+    <p class="small">The personas used in the worked examples. Tap one to copy a starter prompt.</p>
+    <div id="personaLib" class="grid"></div>
+  </div>
+</section>
+
+<!-- ========== ANATOMY ========== -->
+<section id="anatomy">
+  <h2>Anatomy of a persona prompt</h2>
+  <p class="lead">Tap a coloured part to see why it's there.</p>
+  <div class="legend" id="legend"></div>
+  <div class="prompt" id="anaPrompt" style="margin-top:10px"></div>
+  <div class="card" id="anaExplain"><b>Tap a section above.</b></div>
+  <div class="grid">
+    <div class="card"><span class="tag grey">Weak</span><p><i>"Make this letter more professional."</i></p><p class="small">No reader, no criteria, no evidence. Copilot polishes the tone and may quietly drop content.</p></div>
+    <div class="card"><span class="tag green">Stronger</span><p><i>"Act as the customer. Quote the lines where you'd stop reading, and say what you still don't know."</i></p><p class="small">A viewpoint, a task and an output shape. Two sentences is enough.</p></div>
+  </div>
+</section>
+
+<!-- ========== EXAMPLES ========== -->
+<section id="examples">
+  <h2>Worked examples</h2>
+  <p class="lead">Pick the app, pick a piece of work, pick your personas, then run it to see the difference.</p>
+  <div class="card">
+    <h3>1. Where are you working?</h3>
+    <div class="chips" id="appChips"></div>
+    <h3 style="margin-top:14px">2. Which piece of work?</h3>
+    <div id="scnList"></div>
+  </div>
+  <div class="card" id="setup" style="display:none"></div>
+  <div id="result"></div>
+</section>
+
+<!-- ========== MULTI ========== -->
+<section id="build">
+  <h2>Running personas together</h2>
+  <p class="lead">One prompt, several personas — but that means different things depending on what you're testing. A <b>panel</b> simulates a small mixed group reacting to one piece of work, so you see where it lands unevenly. <b>Independent takes</b> ask several personas to review the same material without letting their answers blend, so you get clean, separate verdicts rather than one committee opinion. A <b>segmented room</b> is the version of a panel that scales past a handful of people — for a real audience of 20, 30, 100, you stop naming individuals and instead describe the groups they fall into.</p>
+
+  <div class="two">
+    <div class="card">
+      <span class="tag">Panel / audience</span>
+      <h3>Test a presentation or activity against a mixed room</h3>
+      <p class="small">Use this when the group reaction <i>is</i> the answer: will this session, deck or activity work for everyone in the room at once, and where does it lose people.</p>
+      <div id="panelPrompt"></div>
+      <p class="small" style="margin-top:8px"><b>Watch for:</b> after 3–4 exchanges the personas start sounding the same. Keep it to 4–5 personas, and if the answers start blurring together, re-state who's who partway through.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Independent takes</span>
+      <h3>Get several separate verdicts on one document</h3>
+      <p class="small">Use this when you want clean, uncontaminated feedback — like three separate reviewers, not one meeting where the loudest view wins.</p>
+      <div id="indepPrompt"></div>
+      <p class="small" style="margin-top:8px"><b>Watch for:</b> ask explicitly for separate, labelled sections, and tell it the personas shouldn't reference or agree with each other — otherwise it quietly merges them into a summary.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Segmented room</span>
+      <h3>Simulate a session for 30, 50 or 100 attendees</h3>
+      <p class="small">Use this when there are too many people to name individually, but you know roughly who's in the room, what they need, and what "worked" would look like.</p>
+      <div id="segPrompt"></div>
+      <p class="small" style="margin-top:8px"><b>Watch for:</b> the percentages it gives back are Copilot's reasoning from the segment descriptions you supplied, not a survey of your actual attendees. It's only as good as how accurately you've described the split — treat it as a rehearsal of your assumptions, and check it against real feedback (even a two-question exit poll) afterwards.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Worked example: same session, three ways</h3>
+    <p>You're running a 20-minute live walkthrough of the new triage procedure on Monday, for two new starters plus their manager, who's sitting in to check it lands. Same slides — you want to know how it plays out before you're in the room.</p>
+    <div class="file"><div class="ico" style="background:var(--word)">W</div><div><b>Onboarding-Walkthrough-Slides.pptx</b><div class="small">The deck you're about to run</div></div></div>
+    <div class="file"><div class="ico" style="background:var(--word)">W</div><div><b>Complaint-Triage-Procedure-v7.docx</b><div class="small">What the deck is based on</div></div></div>
+
+    <h3 style="margin-top:16px">Panel prompt and result</h3>
+    <div id="panelEx"></div>
+    <div class="out" style="margin-top:8px"><span class="tag">Simulated panel reaction</span>
+      <ul>
+        <li><b>Slide 2, "What is triage?":</b> new starter following closely. Transferee already knows this — candidate to skip or skim. Manager: pace is fine so far.</li>
+        <li><b>Slide 5, DISP definitions:</b> new starter lost — too many terms in one slide. Transferee fine. Manager: "this is the slide people always stop me on."</li>
+        <li><b>Slide 8, escalation flowchart:</b> transferee checked out, seen it before elsewhere. New starter needs it slower. Manager: this slide alone is eating a third of the 20 minutes.</li>
+      </ul>
+      <p><b>Combined verdict:</b> it doesn't hold together as one session for all three — the transferee is disengaged for a third of it on exactly the minutes the new starter needs slowed down. Split it: 10 minutes of core process for everyone, then a separate 10-minute "what's different here" add-on just for transfers.</p>
+    </div>
+
+    <h3 style="margin-top:16px">Independent prompt and result</h3>
+    <div id="indepEx"></div>
+    <div class="out" style="margin-top:8px"><span class="tag">Simulated independent takes</span>
+      <p><b>New starter:</b> I'd still be unsure what happens with a case that has no clear owner — slide 6 assumes I already know who to ask. I wouldn't cut anything; I needed all of it.</p>
+      <p><b>Transferee:</b> Slides 2–4 are things I already do under a different name in my old process — cut those to one "what's different" slide. I'd want more on your specific escalation SLAs, which aren't in here at all.</p>
+      <p><b>Manager:</b> I'd cut the walkthrough of the case-system screens — that works better as a follow-up 1:1 — and use the time saved to check understanding with a live example.</p>
+    </div>
+
+    <p style="margin-top:12px"><b>The difference:</b> the panel told you the session doesn't work as one-size-fits-all and how to restructure it. The independent takes told you what's actually missing for each person — SLAs for the transferee, ownership rules for the new starter, screens vs a live example for the manager. Same 20 minutes of material, two different kinds of answer, and you likely want both.</p>
+  </div>
+
+  <div class="card">
+    <h3>Worked example: the same walkthrough, scaled to 30 people</h3>
+    <p>The version above works for 3 named people. Now it's the quarterly induction day: 30 attendees for a 45-minute session, and you don't know them individually — but you do know the mix, and you know what "it worked" means: everyone should leave able to log and triage a straightforward case unsupervised.</p>
+    <p class="small"><b>What you know about the room:</b> roughly 18 complete beginners (new joiners), 8 experienced handlers transferring from another team, 4 team leads sitting in to quality-check the session.</p>
+    <div id="segEx"></div>
+    <div class="out" style="margin-top:8px"><span class="tag">Simulated segmented reaction</span>
+      <ul>
+        <li><b>Beginners (~60% of the room):</b> engaged through slides 1–4, start losing the thread by slide 8 where the flowchart jumps to edge cases before the basics are secure. By the end, most can log a case, but not confidently triage one alone.</li>
+        <li><b>Transfers (~27%):</b> only engaged during the "what's different here" moments — call it 10 of the 45 minutes. Otherwise report checked out.</li>
+        <li><b>Team leads (~13%):</b> engaged throughout, but flag that a walkthrough alone won't get beginners to unsupervised triage — they want a practice case built in before the room disperses.</li>
+      </ul>
+      <p><b>Combined verdict:</b> against the stated goal, roughly 60% of the room won't reliably meet "triage unsupervised" from the walkthrough alone. Add a 10-minute guided practice case before the session ends, and move the transfer-specific content to pre-reading so it stops eating room time for the majority it isn't for.</p>
+    </div>
+    <p style="margin-top:12px"><b>What changed from the 3-person version:</b> the personas became weighted segments, and the output became a proportion of the room plus a check against your stated goal, rather than three individual voices. The technique is the same rehearsal; the unit changed from a person to a slice of the room.</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* ---------- DATA ---------- */
+const PERSONAS = {
+  complainant:{emo:"😟",name:"Frustrated customer",blurb:"Anxious, has read three of these letters before, reads on a phone.",starter:"Act as the customer who complained, reading this on their phone. What do you understand you're getting? What still feels dismissed? Where would you stop reading? Quote the lines."},
+  reviewer:{emo:"⚖️",name:"Ombudsman case handler",blurb:"Independent, checks each point of complaint against the evidence.",starter:"Act as an Ombudsman case handler who receives this if the customer escalates. Check the draft against every point of complaint and list gaps as: point / evidence / risk."},
+  consumerduty:{emo:"🧭",name:"Consumer Duty QA reviewer",blurb:"Plain English, customer understanding, treatment of customers in difficulty.",starter:"Act as a QA reviewer checking consumer understanding. Is this plain English, does the customer know what to do next, and is a customer in difficulty treated appropriately?"},
+  exec:{emo:"⏱️",name:"Time-poor exec",blurb:"Reads the subject and the first two lines. Asks 'so what?'",starter:"Act as a Head of Ops with two minutes. What must I do or decide? What would make you stop reading? Rewrite the top two lines."},
+  newstarter:{emo:"🌱",name:"New starter, week one",blurb:"Smart, keen, and doesn't know your acronyms.",starter:"Act as someone in their first week. List every term, step or reference you'd need explained, and what you'd do first."},
+  challenger:{emo:"🔍",name:"Sceptical analyst",blurb:"Asks about denominators, blanks, duplicates and definitions.",starter:"Act as a sceptical analyst. List what could make these results wrong, then give me the checks to test each one."},
+  stakeholder:{emo:"🛡️",name:"Defensive stakeholder",blurb:"Feels over-asked. Wants to know why, and what's in it for them.",starter:"Act as a busy colleague who feels constantly chased. How would you react to my message? What would make you say yes today?"},
+  audit:{emo:"📋",name:"Internal audit",blurb:"Reading it in six months. Wants owners, dates and evidence.",starter:"Act as internal audit reading this in six months. What was decided, by whom, by when, and what evidence shows it's done? What isn't clear?"},
+  absentee:{emo:"📱",name:"Colleague who missed it",blurb:"Has 60 seconds. Wants decisions and whether it affects them.",starter:"Act as a colleague who couldn't attend. In 60 seconds: what was decided, what changed for me, do I need to do anything?"}
+};
+
+const APPS = {
+  "Word":{c:"var(--word)",i:"W"},
+  "Outlook":{c:"var(--outlook)",i:"O"},
+  "Excel":{c:"var(--excel)",i:"X"},
+  "Teams chat":{c:"var(--teams)",i:"T"},
+  "Teams meeting":{c:"var(--teams)",i:"T"}
+};
+
+const SCN = [
+{
+ id:"w1",app:"Word",title:"Final response letter to an upset customer",tag:"Draft goes out Friday",
+ situation:"Ms Patel complained about £340 of overdraft fees after telling the bank she'd lost her job. You've drafted the final response. It goes out Friday. (Customer, figures and dates are invented.)",
+ files:[["Patel-4471-Final-Response-DRAFT.docx","The letter you want to improve"],["Patel-4471-Case-Notes.docx","Timeline, call notes and redress working"],["Complaints-Handling-Guide.docx","Your team's tone and content standards"]],
+ where:"Word → Copilot (Home tab) → type in the Copilot pane. Add the other files by typing / or using Add a file, where your licence allows.",
+ base:{prompt:"Make this letter more professional.",out:`<p><i>Dear Ms Patel, Thank you for contacting us. We apologise for any inconvenience caused. Following careful consideration, we have reviewed your complaint and can confirm a goodwill payment has been made. We trust this resolves the matter.</i></p><p class="small">Smooth and shorter. But the £340 has vanished, two of her three points aren't answered, and the referral rights are gone.</p>`},
+ personas:{
+  complainant:{prompt:"Act as Ms Patel, the customer who complained, reading this letter on her phone on the bus. You're anxious about money. Read the attached draft and tell me: what do you understand you're getting, what still feels dismissed, and where would you stop reading? Quote the lines.",
+   feedback:["Outcome is 'a goodwill payment'. How much, and when? \"I still don't know if I'm getting my £340 back.\"","'Any inconvenience' reads as if you don't accept the fees were wrong.","Two of my three points (fees after I told you about my job; the call nobody returned) aren't mentioned."],
+   fix:"We have refunded all £340 of fees charged between 3 March and 9 May, plus £27.40 interest, to your account ending 4821. It will show by Friday 2 October. You told us on 2 March that you had lost your job. We should have paused the fees then and we didn't. I'm sorry."},
+  reviewer:{prompt:"Act as an Ombudsman case handler who receives this complaint if the customer escalates. Using the case notes, check the letter against each point of complaint, whether the redress is explained, and whether referral rights are present. List gaps as: point / evidence / risk.",
+   feedback:["Point 2 (fees after hardship was disclosed) is unanswered. Likely the deciding issue if it's referred.","Redress figure has no working. How was interest calculated?","Missing: right to refer to the Financial Ombudsman Service, time limit and contact details."],
+   fix:"Here's how we worked out the refund: fees of £340 (7 charges), plus 8% simple interest from the date each fee was charged (£27.40). If you're not happy with this response, you can take your complaint to the Financial Ombudsman Service within six months of the date of this letter. Their details are below."},
+  consumerduty:{prompt:"Act as a QA reviewer checking consumer understanding. Is the letter in plain English? Does the customer know what to do next? Does it treat a customer in financial difficulty appropriately? Rewrite the three weakest sentences.",
+   feedback:["'Goodwill gesture' is jargon and misleading. The refund puts right our error.","No next step or named contact, and no offer of support for someone in difficulty.","Average sentence is around 30 words. Aim for under 20."],
+   fix:"You don't need to do anything to get your refund. If money is tight, call Sam on 0800 000 0000 (Mon–Fri, 9–5) and we can talk about support."}
+ },
+ outcome:"A letter you'd be comfortable seeing in an Ombudsman file. The persona didn't write better English than the plain prompt. It changed what 'better' meant.",
+ check:["Every figure and date matches your case notes","Referral wording comes from your approved template","QA sign-off still happens before it's sent"]
+},
+{
+ id:"w2",app:"Word",title:"12-page procedure into a one-page quick guide",tag:"Onboarding",
+ situation:"Complaint-Triage-Procedure v7 is 12 pages. Two new starters join on Monday and won't read it. You want a one-page guide that's actually usable.",
+ files:[["Complaint-Triage-Procedure-v7.docx","The source of truth (12 pages)"],["Team-Glossary.docx","Your list of terms and acronyms"]],
+ where:"Word → open the procedure → Copilot → ask for a summary or new document based on this file.",
+ base:{prompt:"Summarise this procedure.",out:`<p><i>This procedure sets out how complaints are triaged. It covers purpose, scope, roles and responsibilities, the triage process, escalation and record-keeping, and applies to all complaint handlers…</i></p><p class="small">Accurate, but it mirrors the document's structure. A new starter still can't tell what to do at 9:15 on Monday.</p>`},
+ personas:{
+  newstarter:{prompt:"Act as someone in their first week who has never handled a complaint. Turn the attached procedure into a one-page guide: what do I do first, second, third? What terms don't I know? Who do I ask? Flag anything you'd need explained.",
+   feedback:["'Triage' and 'DISP' are used without explanation.","Step 4 says 'escalate as appropriate'. Appropriate to whom?","Nothing says what to do when the case system is down."],
+   fix:"Your first 30 minutes: 1) Open the Triage queue and sort by Due date. 2) Anything due within 3 days: tell your team leader before you touch it. 3) Otherwise, take the oldest. (DISP = the FCA's complaint-handling rules. A final response is due within 8 weeks of the first complaint.)"},
+  exec:{prompt:"Act as the Head of Ops who will only read the top. In 5 bullets: what must every colleague do differently from last year's version, and what happens if they don't?",
+   feedback:["'What changed since v6' is on page 9. Move it to the top.","No consequence stated for missing the deadline.","Lots of 'should', very few 'must'."],
+   fix:"What's changed in v7: (1) Vulnerability flag is mandatory at triage. (2) Reopened cases go back to the original handler. (3) Root cause tag required at closure. Miss one and the case fails QA."},
+  audit:{prompt:"Act as internal audit. Compare your one-page guide with the full procedure. List anything the guide says that the procedure doesn't, and anything the procedure requires that the guide omits.",
+   feedback:["Guide says 'call within 24 hours'. Procedure says 1 working day.","Vulnerability step is there but the record-keeping step was dropped.","Guide doesn't say which version it's based on."],
+   fix:"Footer: 'Quick guide based on Procedure v7 (Sept 2026). If this and the procedure differ, the procedure wins.'"}
+ },
+ outcome:"A guide built around what the reader does, with the differences from the source made visible rather than hidden.",
+ check:["Read the guide against the procedure yourself, line by line","Ask the procedure owner to approve it","Add the version and review date"]
+},
+{
+ id:"o1",app:"Outlook",title:"Chasing late data from a defensive colleague",tag:"14-message thread",
+ situation:"The Q3 MI pack goes to the exec on Thursday. Dev in Payments still hasn't sent his numbers. The thread is 14 emails long and slightly tense.",
+ files:[["RE: RE: FW: Q3 complaints MI – Payments numbers","The 14-message thread Copilot will read"],["Calendar: Exec MI review, Thu 1 Oct","The deadline"]],
+ where:"Outlook → open the thread → Summarize by Copilot at the top, then Reply → Draft with Copilot. Run the persona review before you send.",
+ base:{prompt:"Write a reply asking for the Payments numbers by Wednesday.",out:`<p><i>Hi Dev, Just checking in on the Q3 numbers. Could you please send them over by Wednesday? Thanks.</i></p><p class="small">Fine on its own. But it's the fourth chaser in the same tone, and Dev has already said he's fed up of 'yet another data request'.</p>`},
+ personas:{
+  stakeholder:{prompt:"Act as Dev, head of Payments ops, who feels his team is constantly asked for data with no feedback. Read the thread. How would you react to my draft reply? What would make you send the numbers today?",
+   feedback:["Fourth chaser in the same tone. Feels like blame.","No reason given. Why Wednesday?","No offer to reduce the effort, like taking a rough extract."],
+   fix:"Hi Dev, the exec MI review is Thursday and Payments is the only section still blank. If it's quicker, send the raw extract as it is and my team will build the tables. Could you get it to us by 12:00 Wednesday? I know this quarter's been heavy for your team. Thanks for the help."},
+  exec:{prompt:"Act as the exec sponsor who is cc'd. She reads the subject line and the first two lines only. Would she know what's needed, from whom, and by when?",
+   feedback:["Subject is 'RE: RE: FW: Q3 MI'. Nobody can tell it's blocked.","No clear ask in the first two lines.","She can't tell whether she needs to act."],
+   fix:"Subject: Action needed by Wed 12:00 – Payments data for Thursday's MI review. First line: Dev, we need Payments' Q3 complaint numbers by 12:00 Wednesday. Everything else is ready."},
+  audit:{prompt:"Act as internal audit reading this thread in six months. Summarise what was agreed, by whom and when. What isn't clear?",
+   feedback:["No record of who agreed the definition of 'complaint' for Payments.","Deadline moved twice without an explicit confirmation.","No closing summary of decisions."],
+   fix:"To confirm: definitions as per MI guide v3 (agreed 14 Sept); deadline Wednesday 12:00 (moved from Monday)."}
+ },
+ outcome:"Same ask, but it lands differently for each reader, and the thread now leaves a clear record.",
+ check:["Don't let Copilot invent agreements. Check every 'as agreed' against the thread","Read the tone yourself before sending","Check who's on To and Cc"]
+},
+{
+ id:"e1",app:"Excel",title:"25,000 complaint rows: what's actually going on?",tag:"Illustrative numbers",
+ situation:"The Q3 complaints log has about 25,000 rows. You need three findings for Thursday that lead to a decision. (All numbers below are invented.)",
+ files:[["Complaints-Q3-Log.xlsx","Formatted as a table: tblComplaints (ID, Date, Product, Theme, Subtheme, Outcome, Redress £, Vulnerable flag)"],["Redress-Bands.xlsx","Reference bands for redress size"]],
+ where:"Excel → Copilot (Home tab). Format the data as a table first (Ctrl+T) with clear headers. Ask for formulas, pivots and charts. Check whether Python-based analysis is enabled in your tenant.",
+ base:{prompt:"Analyse this data and tell me the trends.",out:`<p><i>Complaint volumes rose 12% on Q2. Current accounts had the most complaints. Most cases were upheld. Top themes were Fees and Service.</i></p><p class="small">Reads plausibly. But nothing here tells you what to do, and 'Fees' may be three different labels.</p>`},
+ personas:{
+  exec:{prompt:"Act as a Head of Ops who says 'so what?' to every chart. Using tblComplaints, give me 3 findings. For each: what happened, how big, and what decision it points to. Then one chart per finding.",
+   feedback:["'Volume up 12%'. Up on what, and how many customers is that?","No decision attached to any finding.","Fees are 31% of upheld cases but 58% of redress £. That's the story."],
+   fix:"Finding 1: Fee-related complaints are 31% of upheld cases but 58% of redress £. Decision: fund the fee-notification fix? Chart: redress £ by subtheme, sorted."},
+  challenger:{prompt:"Act as a sceptical analyst. Before I present, list what could make these results wrong: denominators, blanks, duplicates, inconsistent subtheme labels, changes in recording. Then give me formulas or checks to test each.",
+   feedback:["Subtheme has 'Fees', 'fees ' and 'Fee'. Three labels, one thing.","412 rows have a blank Outcome. Open, or missing?","No complaints-per-1,000-accounts figure. The rise may just be growth."],
+   fix:"=COUNTBLANK(tblComplaints[Outcome]) to size the blanks. =TRIM(PROPER([@Subtheme])) in a helper column to normalise labels. Add 'Complaints per 1,000 accounts' using the Accounts sheet."},
+  consumerduty:{prompt:"Act as a Consumer Duty champion. Cut the data by the vulnerable-customer flag. Are outcomes, timeliness or redress different? Show a table and say whether any gap is large enough to raise.",
+   feedback:["Vulnerable-flag customers wait 9 days longer for a final response (median).","Upheld rate is similar. The gap is speed, not outcome.","The flag is only completed on 61% of rows, so the picture is partial."],
+   fix:"Raise on Thursday: 'Vulnerable customers wait longer for a response, and we can't fully see it because the flag is missing on 39% of cases.'"}
+ },
+ outcome:"Three decision-led findings, plus a list of data-quality caveats you'd otherwise have been asked about in the room.",
+ check:["Recalculate every headline number yourself, or with a pivot","Don't accept a chart until you've seen the formula or filter behind it","Fix data quality before you present"]
+},
+{
+ id:"t1",app:"Teams chat",title:"180 unread messages, and a request to push back on",tag:"Team chat",
+ situation:"You've been in workshops all day. The 'Complaints Ops – Q3' chat has 180 unread messages, and someone has asked you to take on a new report.",
+ files:[["Chat: Complaints Ops – Q3","180 unread messages"],["Q3-Action-Tracker.xlsx","Pinned in the channel"]],
+ where:"Teams → open the chat → Copilot (summarise or ask a question) → then use Copilot in the message box to draft or rewrite your reply.",
+ base:{prompt:"Summarise this chat.",out:`<p><i>The team discussed the Q3 report, backlog numbers and a new ad hoc report request. Several people shared views on priorities and the wording of a slide.</i></p><p class="small">Correct, and useless. You still don't know what's yours to do.</p>`},
+ personas:{
+  exec:{prompt:"Act as me: a manager who has been out all day. From this chat, what needs my decision, what's mine to do, and what can I ignore? Three lists, and say who asked.",
+   feedback:["Priya asked you directly at 11:42 to approve overtime. Unanswered.","The ad hoc report isn't yours to agree. It belongs to the MI team.","The long debate about slide wording needs no action."],
+   fix:"Reply to Priya: 'Approved for Thursday and Friday, max 6 hours each. Please log on the tracker.' Ignore the slide-wording thread."},
+  stakeholder:{prompt:"Act as Tom, who asked for the new report. I want to say not this week. Draft a reply Tom would accept. What might he hear as a flat 'no'?",
+   feedback:["'We don't have capacity' sounds like a refusal.","No alternative offered.","No date."],
+   fix:"Tom, happy to take this on, but not before Thursday's pack goes out. Can we confirm scope and a date on Monday? If it's urgent, I can send an extract from the current log to bridge it."},
+  newstarter:{prompt:"Act as a new starter who's just been added to this chat. Which acronyms and references would confuse you? Write a short 'Start here' pinned message.",
+   feedback:["'The MI', 'the pack', 'DISP' and 'RCA' are never explained.","Unclear who owns which section.","No link to the tracker."],
+   fix:"Pinned: 'Start here. MI = management information. The pack = Thursday's exec report. Tracker: [link]. Owners: Priya (volumes), Sam (redress), you (questions!)'"}
+ },
+ outcome:"You go from 180 messages to: one reply to send, one to push back on, and a pinned message that stops the same confusion recurring.",
+ check:["Read the source messages before acting on a summary of who asked what","Check the tone of any drafted reply, especially pushbacks","Don't approve anything on the strength of a summary alone"]
+},
+{
+ id:"m1",app:"Teams meeting",title:"Prep: the exec MI review on Thursday",tag:"Before the meeting",
+ situation:"You present complaints MI to the exec on Thursday at 10:00. You want to know what you'll be asked before you're in the room.",
+ files:[["Thu 1 Oct 10:00, Exec MI review (calendar invite)","Attendees and agenda"],["Q3-MI-Pack-v4.pptx","The pack you'll present"],["Recap of last month's review","Only if that meeting was recorded and you have access"],["Q3-Action-Tracker.xlsx","Open actions"]],
+ where:"Teams or the Microsoft 365 Copilot app → ask for a prep briefing, referencing the meeting invite and the files by name.",
+ base:{prompt:"Give me a briefing for my meeting on Thursday.",out:`<p><i>Exec MI review, Thursday 10:00. Attendees: Head of Ops, Finance Director, Compliance lead. Related files: Q3 MI pack, action tracker. Last meeting covered volumes and redress.</i></p><p class="small">A useful list of what exists. No view on what will actually happen in the room.</p>`},
+ personas:{
+  exec:{prompt:"Act as the Head of Ops. You've read the attached pack on the train. What are the 5 questions you'll ask, in order, and what answer would make you stop asking?",
+   feedback:["Q1: Is the higher upheld rate our decisions or the mix of cases?","Q2: What did redress cost compared with last quarter?","Q3: Which of last month's four actions slipped, and why?"],
+   fix:"Prepared answer to Q1: 'Mix. Fee complaints rose from 22% to 31% of cases and those uphold at 70%. Underlying decision quality is stable on QA sampling.'"},
+  challenger:{prompt:"Act as the Finance Director. You distrust unreconciled numbers. Go through the attached pack and list every figure you'd want a source or reconciliation for.",
+   feedback:["Redress £ on slide 4 doesn't say if it includes interest.","Slide 6 has no source or date.","'Improved' is used three times without a comparison."],
+   fix:"Add a footnote on slide 4: 'Redress includes 8% simple interest.' Add source and extract date to slide 6."},
+  audit:{prompt:"Act as internal audit. Compare last month's action list with the tracker and the pack. Which actions are overdue? Which numbers differ between documents?",
+   feedback:["Action 3 was due 15 Sept. Still open and not in the pack.","Pack says 4,210 complaints; tracker says 4,190.","Nothing in the pack about the outstanding action."],
+   fix:"Reconcile the 20-case difference before Thursday, or explain it on slide 2. Add an 'Actions status' slide."}
+ },
+ outcome:"You walk in knowing the likely questions, the numbers that don't reconcile, and the action that slipped.",
+ check:["Open the pack and confirm the discrepancies Copilot flagged are real","Treat the predicted questions as a rehearsal, not a forecast","Only use recaps you are entitled to see"]
+},
+{
+ id:"m2",app:"Teams meeting",title:"After: recap, decisions and actions",tag:"After the meeting",
+ situation:"The 45-minute review was transcribed. You need to send decisions and actions within the hour.",
+ files:[["Meeting transcript and recap","Requires transcription to be on"],["Q3-Action-Tracker.xlsx","Where actions get recorded"]],
+ where:"Teams → the meeting chat → Recap tab → ask Copilot follow-up questions. Availability depends on the meeting's Copilot and transcription settings.",
+ base:{prompt:"Summarise the meeting and list the actions.",out:`<p><i>Discussion covered upheld rates, fee complaints and the ad hoc report. Actions: look into the vulnerable flag; review fee notification; follow up on the new report.</i></p><p class="small">Actions have no owner, no date and no definition of done.</p>`},
+ personas:{
+  audit:{prompt:"Act as internal audit. For each action in the transcript, give: owner, due date, and what evidence shows it's done. Mark any that lack these as UNOWNED. Also list decisions separately from discussion.",
+   feedback:["3 of 6 actions have no named owner.","'Look into the vulnerable flag' has no outcome.","Two decisions (fee fix funded; report deferred) were made but not recorded as decisions."],
+   fix:"Action: Improve vulnerable-flag completion | Owner: Priya | Due: 16 Oct | Evidence: flag completion at least 90% on the weekly report."},
+  absentee:{prompt:"Act as a colleague who couldn't attend. In 60 seconds of reading: what was decided, what changes for me, and do I have to do anything?",
+   feedback:["Recap starts with discussion, not decisions.","Can't tell if the fee decision affects my team.","My name isn't mentioned. Does that mean nothing for me?"],
+   fix:"Decisions (2): fee-notification fix funded; ad hoc report deferred to November. Nothing needed from Payments or Legal."},
+  exec:{prompt:"Act as the Head of Ops reading the recap on your phone between meetings. Would you forward it as it is? What would you change?",
+   feedback:["Too long for a phone.","Passive tone: 'it was felt that…'.","No top line telling me what I need to do."],
+   fix:"Top line: 'Two decisions, five actions, one needs you: approve the £12k fee-notification change by 9 Oct.'"}
+ },
+ outcome:"A recap people can act on, with decisions separated from discussion, and nothing left ownerless.",
+ check:["Check names and dates against the transcript","Confirm with owners before you send the actions","Update the tracker yourself"]
+}
+];
+
+/* ---------- HELPERS ---------- */
+const $=s=>document.querySelector(s);
+function copy(text,btn){
+  try{navigator.clipboard.writeText(text);const o=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=o,1200)}catch(e){btn.textContent="Select and copy"}
+}
+window._c=(i,btn)=>copy(window._store[i],btn);
+window._store=[];
+function promptBox(text){
+  window._store.push(text);
+  const i=window._store.length-1;
+  return `<div class="prompt"><button class="copy" onclick="_c(${i},this)">Copy</button>${text.replace(/</g,"&lt;")}</div>`;
+}
+const li=a=>"<ul>"+a.map(x=>"<li>"+x+"</li>").join("")+"</ul>";
+
+/* ---------- NAV ---------- */
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+/* ---------- PERSONA LIBRARY ---------- */
+$("#personaLib").innerHTML=Object.values(PERSONAS).map(p=>{
+  window._store.push(p.starter);const i=window._store.length-1;
+  return `<div class="card persona-card" style="margin:0"><div class="emo">${p.emo}</div><div><h3>${p.name}</h3><p class="small">${p.blurb}</p><button class="btn ghost" style="padding:5px 12px;font-size:.8rem" onclick="_c(${i},this)">Copy starter prompt</button></div></div>`;
+}).join("");
+
+/* ---------- ANATOMY ---------- */
+const SEGS=[
+ ["role","Persona / role","Act as an Ombudsman case handler reviewing a complaint that has been escalated.","Sets the viewpoint. This is what changes 'better' from 'smoother' to 'defensible'. Name a real reader or judge, and say what they care about."],
+ ["ctx","Context / files","Use the attached Patel-4471 case notes and our Complaints Handling Guide.","Grounds the review in your material, so the feedback is specific. Name the files, or attach them, rather than relying on general knowledge."],
+ ["task","Task","Check the draft final response against each point of complaint.","One clear job. Reviewing is different from rewriting, so keep them separate."],
+ ["crit","Criteria","Flag any point that is unanswered, any figure without working, and any missing referral wording.","Tells the persona what good looks like. Without it you get vague feedback."],
+ ["fmt","Format","Give me a table: point / evidence / risk / suggested fix.","Makes the answer scannable and easy to act on. Also easy to paste into a tracker."],
+ ["lim","Limits","Don't rewrite the letter yet. If something isn't in the documents, say 'not in the documents'.","Stops it drifting into a rewrite, and stops it inventing facts to fill gaps."]
+];
+$("#legend").innerHTML=SEGS.map(s=>`<span class="k-${s[0]}">${s[1]}</span>`).join("");
+$("#anaPrompt").innerHTML=SEGS.map(s=>`<span class="seg k-${s[0]}" data-k="${s[0]}">${s[2]}</span>`).join(" ");
+document.querySelectorAll(".seg").forEach(el=>el.onclick=()=>{
+  const s=SEGS.find(x=>x[0]===el.dataset.k);
+  document.querySelectorAll(".seg").forEach(x=>x.classList.toggle("on",x===el));
+  $("#anaExplain").innerHTML=`<h3>${s[1]}</h3><p>${s[3]}</p>`;
+});
+
+/* ---------- EXAMPLES ---------- */
+let curApp="Word",curScn=null,picked=new Set(),timers=[];
+function renderApps(){
+  $("#appChips").innerHTML=Object.keys(APPS).map(a=>`<button class="chip ${a===curApp?"on":""}" data-app="${a}">${a}</button>`).join("");
+  document.querySelectorAll("#appChips .chip").forEach(b=>b.onclick=()=>{curApp=b.dataset.app;curScn=null;clearRun();renderApps();renderScn();$("#setup").style.display="none"});
+}
+function renderScn(){
+  $("#scnList").innerHTML=SCN.filter(s=>s.app===curApp).map(s=>`<button class="scn ${curScn&&curScn.id===s.id?"on":""}" data-id="${s.id}"><b>${s.title}</b><small>${s.tag}</small></button>`).join("");
+  document.querySelectorAll(".scn").forEach(b=>b.onclick=()=>{curScn=SCN.find(s=>s.id===b.dataset.id);picked=new Set([Object.keys(curScn.personas)[0]]);clearRun();renderScn();renderSetup()});
+}
+function clearRun(){timers.forEach(clearTimeout);timers=[];$("#result").innerHTML=""}
+function renderSetup(){
+  const s=curScn,a=APPS[s.app];
+  const el=$("#setup");el.style.display="block";
+  el.innerHTML=`
+   <span class="tag">The situation</span><p>${s.situation}</p>
+   <span class="tag grey">Files involved</span>
+   ${s.files.map(f=>`<div class="file"><div class="ico" style="background:${a.c}">${a.i}</div><div><b>${f[0]}</b><div class="small">${f[1]}</div></div></div>`).join("")}
+   <p class="small"><b>Where to start:</b> ${s.where}</p>
+   <p class="small" style="color:var(--warn)"><b>Watch out for:</b> ${s.check[0]}</p>
+   <h3 style="margin-top:14px">3. Choose your persona(s)</h3>
+   <div class="chips" id="pChips">${Object.keys(s.personas).map(k=>`<button class="chip ${picked.has(k)?"on":""}" data-p="${k}">${PERSONAS[k].emo} ${PERSONAS[k].name}</button>`).join("")}</div>
+   <p class="small" id="pDesc"></p>
+   <button class="btn" id="runBtn">Run the comparison</button>`;
+  const desc=()=>{ $("#pDesc").innerHTML=[...picked].map(k=>PERSONAS[k].emo+" "+PERSONAS[k].blurb).join("<br>"); $("#runBtn").disabled=picked.size===0; };
+  document.querySelectorAll("#pChips .chip").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.p; picked.has(k)?picked.delete(k):picked.add(k);
+    b.classList.toggle("on");desc();
+  });
+  desc();
+  $("#runBtn").onclick=run;
+}
+function think(msg){return `<div class="think"><span class="dot"></span>${msg}</div>`}
+function run(){
+  clearRun();
+  const s=curScn,R=$("#result"),ps=[...picked];
+  R.innerHTML=`<div id="st1"></div><div id="st2"></div><div id="st3"></div><div id="st4"></div>`;
+  $("#st1").innerHTML=think("Copilot is answering the plain prompt…");
+  timers.push(setTimeout(()=>{
+    $("#st1").innerHTML=`<div class="card fade"><span class="tag grey">Round 1</span> <b>Plain prompt</b>${promptBox(s.base.prompt)}<div class="out plain" style="margin-top:10px"><span class="tag grey">Copilot (simulated)</span>${s.base.out}</div></div>`;
+    $("#st2").innerHTML=think("Now asking your persona(s) to review it…");
+  },900));
+  timers.push(setTimeout(()=>{
+    $("#st2").innerHTML=`<div class="card fade"><span class="tag">Round 2</span> <b>Persona review</b>`+ps.map(k=>{
+      const p=s.personas[k];
+      return `<h3 style="margin-top:14px">${PERSONAS[k].emo} ${PERSONAS[k].name}</h3>${promptBox(p.prompt)}<div class="out" style="margin-top:8px"><span class="tag">What they'd say (simulated)</span>${li(p.feedback)}</div>`;
+    }).join("")+`</div>`;
+    $("#st3").innerHTML=think("Revising with those points…");
+  },2400));
+  timers.push(setTimeout(()=>{
+    $("#st3").innerHTML=`<div class="card fade"><span class="tag green">Round 3</span> <b>What changes in your work</b>`+ps.map(k=>`<div class="out" style="margin-top:10px"><span class="tag green">${PERSONAS[k].emo} ${PERSONAS[k].name}</span><p>${s.personas[k].fix}</p></div>`).join("")+`<p style="margin-top:12px"><b>The difference:</b> ${s.outcome}</p></div>`;
+    $("#st4").innerHTML=`<div class="card warn fade"><b>Check before you trust it</b>${li(s.check)}<p class="small">You could also run the personas one at a time and pick which points to take. Try a different persona above and run again.</p></div>`;
+    $("#st4").scrollIntoView({behavior:"smooth",block:"nearest"});
+  },4000));
+}
+renderApps();renderScn();
+
+/* ---------- MULTI-PERSONA PROMPTS ---------- */
+$("#panelPrompt").innerHTML=promptBox("Simulate three people watching this walkthrough live: (1) a new starter with no complaints-handling experience, (2) an experienced handler transferring from another team who already knows the basics, (3) their manager, sitting in to check it lands. Go through the attached slides one by one. After each slide, note briefly who's engaged, who's lost, and who's bored. At the end, give one combined verdict: which slides to cut, which to expand, and whether 20 minutes works as one session for all three, or whether it should split.");
+$("#indepPrompt").innerHTML=promptBox("Answer as each of the following personas separately, using the attached slides. Don't let their answers refer to each other — no agreeing, no building on a previous answer. Label each section with their name. 1) A new starter with no complaints-handling experience. 2) An experienced handler transferring from another team. 3) Their manager, checking the session works. For each: what would you still be unsure about after this session, and what would you cut if it overran?");
+$("#panelEx").innerHTML=promptBox("Simulate three people watching this walkthrough live: a new starter, a transferring handler, and their manager sitting in. Go slide by slide and note who's engaged, lost or bored at each point, then give one combined verdict on whether 20 minutes works for all three or should split.");
+$("#indepEx").innerHTML=promptBox("Answer as each of these three separately and don't let them refer to each other: 1) new starter, 2) transferring handler, 3) manager sitting in. For each, using the attached slides: what would you still be unsure about, and what would you cut if the session overran?");
+$("#segPrompt").innerHTML=promptBox("You're advising on a 45-minute session for 30 attendees. The room, as I understand it: (1) ~60% complete beginners to complaints handling, mostly new joiners — need to leave able to triage a straightforward case unsupervised. (2) ~27% experienced handlers transferring from another team — need to leave knowing what's different here, not the basics. (3) ~13% team leads sitting in to quality-check the session. Session goal: everyone can log and triage a straightforward case by the end. Using the attached agenda, go through it and for each segment say where they'd be engaged, lost or bored, and roughly what share of the room that affects. Then give one verdict: what percentage of the room is well served as this stands against the stated goal, and the smallest change that would raise it.");
+$("#segEx").innerHTML=promptBox("30 attendees: ~60% complete beginners, ~27% transferring handlers, ~13% team leads sitting in. Goal: everyone can log and triage a straightforward case unsupervised by the end. Go through the attached slides and for each segment say where they're engaged, lost or bored and what share of the room that affects, then give one verdict against the stated goal.");
+</script>
+</body>
+</html>
